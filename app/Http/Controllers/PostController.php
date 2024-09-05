@@ -6,62 +6,71 @@ use App\Http\Resources\Post\PostCollection;
 use App\Http\Resources\Post\PostResource;
 use App\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use DB;
 
 class PostController extends Controller
 {
-
     public function __construct()
     {
         $this->middleware('auth:api');
     }
-
     public function index()
     {
+        // melakukan var_dum untuk melihat apakah query di jalankan berulang-ulang atau tidak?.
         // DB::listen(function ($query) {
         //     var_dump($query->sql);
         // });
 
-        $data = Post::with(['user', ])->paginate(4);
+        // mengatasi agar server tidak melakukan query berulang-ulang mengunakan igerload
+        $data = Post::with(['user'])->paginate(5);
+
+        // membuat data pagination
+        // $data = Post::paginate(5);
+
+        // cara mengcustom response
         return new PostCollection($data);
-        // return response()->json(new PostCollection($data), 200);
+
+        // $data = Post::all();
+        // return response()->json($data, 200);
     }
 
     public function show($id)
     {
         $data = Post::find($id);
-
         if (is_null($data)) {
             return response()->json([
-                'message' => 'Resource not found!'
+                'Message' => 'Resource not found!'
             ], 404);
         }
 
-        // return $data;
+        // cara mengcustom response
+        return new PostResource($data);
 
-        return response()->json(new PostResource($data), 200);
+        // return response()->json($data, 200);
     }
 
     public function store(Request $request)
     {
         $data = $request->all();
-
         $validator = Validator::make($data, [
             'title' => ['required', 'min:5']
         ]);
-
         if ($validator->fails()) {
             return response()->json([
                 'error' => $validator->errors()
             ], 400);
         }
 
+        // membuat data baru tanpa authentication
         // $response = Post::create($data);
+
+        // membuat data baru dengan authentication
         $response = request()->user()->posts()->create($data);
 
         return response()->json($response, 201);
     }
+
 
     public function update(Request $request, Post $post)
     {
